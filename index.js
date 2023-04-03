@@ -1,24 +1,14 @@
 const { REST, Routes } = require('discord.js');
 const commands = [
 	  {
-		      name: 'gpt35',
-		      description: 'chatgpt 3.5 を利用します',
+		      name: 'gpt35translate',
+		      description: 'chatgpt 3.5 を利用した翻訳を行います',
 		    },
 ];
 
 let DISCORD_TOKEN = ""
 let DISCORD_CLIENT_ID = ""
 let CHATGPT_TOKEN = ""
-
-let chatHistories = [];
-function saveChatHistory(role,message){
-  chatHistories.push({
-    role: role,
-    message: message,
-    timestamp: new Date()
-  })
-}
-
 
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
@@ -50,7 +40,7 @@ client.on('ready', async () => {
 
 client.on('interactionCreate', async interaction => {
   if (interaction.isChatInputCommand()){
-    if (interaction.commandName === 'gpt35') {
+    if (interaction.commandName === 'gpt35translate') {
       const modal = new ModalBuilder()
         .setCustomId('gpt35')
         .setTitle('gpt35');
@@ -65,19 +55,16 @@ client.on('interactionCreate', async interaction => {
   }
   if (interaction.isModalSubmit()){
     var value = interaction.fields.getTextInputValue('questionsInput');
-    saveChatHistory("user",value);
     await interaction.deferReply("chatgpt is thinking...");
     
     let data = {
       model:"gpt-3.5-turbo",
       messages: [
+	{ "role":"user","content":"次に話す内容を英語に翻訳してください。" },
+	{ "role":"user","content":value }
       ],
-      temperature:0.7
+      temperature:0
     }
-
-    chatHistories.forEach((history) => {
-      data.messages.push({role:history.role,content:history.message})
-    })
 
     let headers = {
       "Content-Type":'application/json',
@@ -86,7 +73,6 @@ client.on('interactionCreate', async interaction => {
 
     var gptres = await axios.post("https://api.openai.com/v1/chat/completions", data, {headers: headers})
     var gptresponse = gptres.data.choices[0].message.content;
-    saveChatHistory("assistant",gptresponse)
     value = value.replace("\n","\n> ")
     var message = `> ${value}\n` + gptresponse;
     await interaction.followUp(message);
